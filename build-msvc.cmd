@@ -9,7 +9,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-cl.exe /nologo /W4 /EHsc /MT /DUNICODE /D_UNICODE ^
+cl.exe /nologo /W4 /EHsc /MT ^
     remove_net_device.cpp ^
     /Fe:remove-net-device.exe /link setupapi.lib newdev.lib
 

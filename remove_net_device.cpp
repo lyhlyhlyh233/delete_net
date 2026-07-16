@@ -1,12 +1,6 @@
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
-#ifndef UNICODE
-#define UNICODE
-#endif
-#ifndef _UNICODE
-#define _UNICODE
-#endif
 #ifndef _WIN32_WINNT
 #define _WIN32_WINNT 0x0601
 #endif
@@ -19,17 +13,17 @@
 #include <newdev.h>
 
 #include <iostream>
+#include <string>
 
 #pragma comment(lib, "newdev.lib")
 #pragma comment(lib, "setupapi.lib")
 #pragma comment(linker, "/MANIFESTUAC:\"level='requireAdministrator' uiAccess='false'\"")
 
-DWORD RemoveDevice(const wchar_t* deviceId, bool* rebootRequired) {
-    if (!deviceId || !*deviceId || !rebootRequired) {
+DWORD RemoveDevice(const std::string& deviceId) {
+    if (deviceId.empty()) {
         return ERROR_INVALID_PARAMETER;
     }
 
-    *rebootRequired = false;
     HDEVINFO deviceSet = SetupDiCreateDeviceInfoList(nullptr, nullptr);
     if (deviceSet == INVALID_HANDLE_VALUE) {
         return GetLastError();
@@ -39,14 +33,14 @@ DWORD RemoveDevice(const wchar_t* deviceId, bool* rebootRequired) {
     device.cbSize = sizeof(device);
     DWORD error = ERROR_SUCCESS;
 
-    if (!SetupDiOpenDeviceInfoW(deviceSet, deviceId, nullptr, 0, &device)) {
+    if (!SetupDiOpenDeviceInfoA(
+            deviceSet, deviceId.c_str(), nullptr, 0, &device)) {
         error = GetLastError();
     } else {
-        BOOL reboot = FALSE;
-        if (!DiUninstallDevice(nullptr, deviceSet, &device, 0, &reboot)) {
+        BOOL ignoredReboot = FALSE;
+        if (!DiUninstallDevice(
+                nullptr, deviceSet, &device, 0, &ignoredReboot)) {
             error = GetLastError();
-        } else {
-            *rebootRequired = reboot != FALSE;
         }
     }
 
@@ -54,29 +48,23 @@ DWORD RemoveDevice(const wchar_t* deviceId, bool* rebootRequired) {
     return error;
 }
 
-int wmain(int argc, wchar_t* argv[]) {
+int main(int argc, char* argv[]) {
     if (argc < 2) {
-        std::wcerr << L"Usage: " << argv[0]
-                   << L" <DeviceInstanceId> [DeviceInstanceId ...]\n";
+        std::cerr << "Usage: " << argv[0]
+                  << " <DeviceInstanceId> [DeviceInstanceId ...]\n";
         return 2;
     }
 
     bool failed = false;
-    bool rebootRequired = false;
     for (int index = 1; index < argc; ++index) {
-        bool reboot = false;
-        const DWORD error = RemoveDevice(argv[index], &reboot);
+        const DWORD error = RemoveDevice(argv[index]);
         if (error == ERROR_SUCCESS) {
-            std::wcout << L"OK: " << argv[index] << L"\n";
-            rebootRequired = rebootRequired || reboot;
+            std::cout << "OK: " << argv[index] << "\n";
         } else {
-            std::wcerr << L"FAILED " << error << L": " << argv[index] << L"\n";
+            std::cerr << "FAILED " << error << ": " << argv[index] << "\n";
             failed = true;
         }
     }
 
-    if (failed) {
-        return 1;
-    }
-    return rebootRequired ? ERROR_SUCCESS_REBOOT_REQUIRED : ERROR_SUCCESS;
+    return failed ? 1 : ERROR_SUCCESS;
 }
