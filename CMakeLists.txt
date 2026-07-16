@@ -8,13 +8,11 @@ endif()
 
 add_executable(remove-net-device
     remove_net_device.cpp
-    network_device_remover.cpp
-    network_device_remover.h
 )
 
 target_compile_features(remove-net-device PRIVATE cxx_std_14)
 target_compile_definitions(remove-net-device PRIVATE UNICODE _UNICODE)
-target_link_libraries(remove-net-device PRIVATE setupapi advapi32)
+target_link_libraries(remove-net-device PRIVATE setupapi newdev)
 
 set_target_properties(remove-net-device PROPERTIES
     CXX_EXTENSIONS OFF
